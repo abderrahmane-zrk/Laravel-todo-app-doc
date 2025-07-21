@@ -4,13 +4,19 @@
 <div class="max-w-2xl mx-auto mt-12 px-4">
     <h1 class="text-3xl font-bold text-center mb-8 text-blue-800">📋 قائمة المهام</h1>
 
+ 
+    <!-- إشعار -->
+    <div id="notification" class="hidden fixed bottom-5 right-5 bg-white border border-gray-200 p-4 rounded shadow-lg max-w-xs">
+        <p class="mr-6">هذا إشعار باستخدام Tailwind!</p>
+        <span id="closeBtn" class="absolute top-2 left-2 cursor-pointer text-gray-500 hover:text-black">×</span>
+    </div>
+
     <!-- إضافة مهمة -->
     <form id="add-task-form" class="flex gap-2 mb-6">
         @csrf
         <input type="text" id="task-title" name="title" placeholder="أدخل مهمة جديدة"
             class="flex-1 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-        <button type="submit"
-            class="bg-blue-600 hover:bg-blue-700 transition text-white px-4 py-2 rounded-lg ">➕ إضافة</button>
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 transition text-white px-4 py-2 rounded-lg">➕ إضافة</button>
     </form>
 
     <!-- عمليات متعددة -->
@@ -37,7 +43,7 @@
                 </div>
                 <span
                     class="text-xs px-2 py-1 rounded-full {{ $task->completed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">
-                    {{ $task->completed ? 'مكتملة' : 'نشطة' }}
+                    {{ $task->completed ? '✅  مكتملة' : '🔁  نشطة' }}
                 </span>
             </li>
         @endforeach
@@ -47,6 +53,47 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const csrf = document.querySelector('input[name="_token"]').value;
+
+    function showNotification(message, type = 'info') {
+        const notif = document.getElementById('notification');
+        const closeBtn = document.getElementById('closeBtn');
+        const textElement = notif.querySelector('p');
+
+        // تنظيف الألوان السابقة
+        notif.classList.remove('border-red-300', 'border-green-300', 'border-yellow-300', 'border-blue-300');
+        textElement.classList.remove('text-red-700', 'text-green-700', 'text-yellow-700', 'text-blue-700');
+
+        // إضافة اللون حسب النوع
+        switch (type) {
+            case 'success':
+                notif.classList.add('border-green-300');
+                textElement.classList.add('text-green-700');
+                break;
+            case 'error':
+                notif.classList.add('border-red-300');
+                textElement.classList.add('text-red-700');
+                break;
+            case 'warning':
+                notif.classList.add('border-yellow-300');
+                textElement.classList.add('text-yellow-700');
+                break;
+            default:
+                notif.classList.add('border-blue-300');
+                textElement.classList.add('text-blue-700');
+        }
+
+        // تحديث الرسالة
+        textElement.textContent = message;
+
+        // إظهار الإشعار
+        notif.classList.remove('hidden');
+
+        // إغلاق تلقائي بعد 5 ثوانٍ
+        setTimeout(() => notif.classList.add('hidden'), 7000);
+
+        // زر الإغلاق اليدوي
+        closeBtn.onclick = () => notif.classList.add('hidden');
+    }
 
     // إضافة مهمة
     document.getElementById('add-task-form').addEventListener('submit', async function (e) {
@@ -65,8 +112,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const data = await response.json();
         if (data.success) {
-            addTaskToList(data.task); // ✅ تضيفه مباشرة في الأعلى
+            addTaskToList(data.task);
             document.getElementById('task-title').value = '';
+            showNotification('✅ تم إضافة المهمة بنجاح', 'success');
+        } else {
+            showNotification('❌ حدث خطأ أثناء الإضافة', 'error');
         }
     });
 
@@ -90,10 +140,11 @@ document.addEventListener("DOMContentLoaded", function () {
             selected.forEach(id => {
                 document.querySelector(`#task-${id}`)?.remove();
             });
+            showNotification('🗑️ تم حذف المهام المحددة', 'error');
         }
     });
 
-    // إنهاء أو إلغاء إنهاء المهام المحددة
+    // إنهاء أو إلغاء إنهاء المهام
     document.getElementById('mark-complete').addEventListener('click', () => toggleCompletionForSelected(true));
     document.getElementById('mark-incomplete').addEventListener('click', () => toggleCompletionForSelected(false));
 
@@ -106,8 +157,7 @@ document.addEventListener("DOMContentLoaded", function () {
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': csrf,
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({ ids: selected, completed })
         });
@@ -115,6 +165,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const data = await response.json();
         if (data.success) {
             await refreshTaskList();
+            showNotification(completed ? '✅ تم إنهاء المهام' : '🔁 تم إلغاء الإنهاء', completed ? 'success' : 'warning');
         }
     }
 
@@ -122,12 +173,10 @@ document.addEventListener("DOMContentLoaded", function () {
         return [...document.querySelectorAll('.task-checkbox:checked')].map(cb => cb.value);
     }
 
-    // جلب قائمة المهام وتحديث الواجهة
     async function refreshTaskList() {
         const response = await fetch('{{ route("tasks.index") }}', {
             headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
+                'X-Requested-With': 'XMLHttpRequest'
             }
         });
 
@@ -135,15 +184,12 @@ document.addEventListener("DOMContentLoaded", function () {
         if (data.success) {
             const ul = document.getElementById('task-list');
             ul.innerHTML = '';
-
-            // ❗️هنا نضمن أن نبدأ بالأقدم أولًا، ثم نضيفهم باستخدام prepend ليظهر الأحدث بالأعلى
             data.tasks.reverse().forEach(task => {
                 addTaskToList(task);
             });
         }
     }
 
-    // توليد عنصر المهمة وإضافته للقائمة
     function addTaskToList(task) {
         const ul = document.getElementById('task-list');
         const li = document.createElement('li');
@@ -152,8 +198,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const completedClass = task.completed ? 'line-through text-gray-400' : 'text-gray-800 font-medium';
         const statusBadge = task.completed
-            ? '<span class="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">مكتملة</span>'
-            : '<span class="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">نشطة</span>';
+            ? '<span class="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">✅ مكتملة</span>'
+            : '<span class="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">🔁 نشطة</span>';
 
         li.innerHTML = `
             <div class="flex items-center gap-3">
@@ -163,11 +209,23 @@ document.addEventListener("DOMContentLoaded", function () {
             ${statusBadge}
         `;
 
-        ul.prepend(li); // ✅ الأحدث دائمًا في الأعلى
+        ul.prepend(li);
     }
 });
+
+document.addEventListener('DOMContentLoaded', () => {
+            const showBtn = document.getElementById('showBtn');
+            const notification = document.getElementById('notification');
+            const closeBtn = document.getElementById('closeBtn');
+
+            showBtn.addEventListener('click', () => {
+                notification.classList.remove('hidden');
+                setTimeout(() => notification.classList.add('hidden'), 5000);
+            });
+
+            closeBtn.addEventListener('click', () => {
+                notification.classList.add('hidden');
+            });
+        });
 </script>
-
-
-
 @endsection
