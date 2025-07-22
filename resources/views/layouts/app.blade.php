@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تطبيق المهام</title>
-    @vite('resources/css/app.css')
-
-
     
+    {{-- تضمين CSS عبر Vite --}}
+   @vite(['resources/css/app.css', 'resources/js/app.js'])
+
 </head>
 <body class="bg-gray-100 min-h-screen py-10 px-4">
 
@@ -21,5 +21,7 @@
         @yield('content')
     </main>
 
+    {{-- تضمين سكربتات من الأقسام الداخلية إن وجدت --}}
+    @stack('scripts')
 </body>
 </html>

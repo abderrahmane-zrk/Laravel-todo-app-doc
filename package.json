@@ -25,5 +25,10 @@
     },
     "keywords": [],
     "author": "",
-    "license": "ISC"
+    "license": "ISC",
+    "dependencies": {
+        "datatables.net": "^2.3.2",
+        "datatables.net-dt": "^2.3.2",
+        "tabulator-tables": "^6.3.1"
+    }
 }

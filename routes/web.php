@@ -14,4 +14,5 @@ Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
 
 Route::post('/tasks/delete-multiple', [TaskController::class, 'deleteMultiple'])->name('tasks.deleteMultiple');
 Route::post('/tasks/bulk-toggle', [TaskController::class, 'bulkToggle'])->name('tasks.bulkToggle');
+Route::post('/tasks/bulk-update', [TaskController::class, 'bulkToggle'])->name('tasks.bulk-update');
 
