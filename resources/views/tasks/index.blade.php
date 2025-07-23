@@ -21,7 +21,7 @@
     <div class="flex flex-wrap gap-2 mb-4">
         <button type="button" data-status="pending"
             class="status-btn bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg shadow transition">🔁 إعادة
-            تنشيط</button>
+            كجديدة </button>
         <button type="button" data-status="in_progress"
             class="status-btn bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg shadow transition">⏳ قيد
             المعالجة</button>
@@ -74,7 +74,8 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function () {
-    const notification = document.getElementById('notification');
+
+        const notification = document.getElementById('notification');
 
         // إشعار Tailwind
         function showNotification(message, type = 'success') {
@@ -87,39 +88,66 @@
         }
 
         // إعداد الجدول
-        let taskTable = new Tabulator("#task-table", {
-            layout: "fitColumns",
-            selectable: true,
-            placeholder: "لا توجد مهام حالياً",
-            columns: [
-                { title: "📌", formatter: "rowSelection", titleFormatter: "rowSelection", hozAlign: "center", headerSort: false, width: 50 },
-                { title: "المهمة", field: "title", headerSort: false },
-                { title: "🔖 المرجع", field: "reference", headerSort: false },
-                {
-                    title: "الحالة", field: "status", hozAlign: "center", headerSort: false,
-                    formatter: cell => {
-                        const val = cell.getValue();
-                        if (val === 'pending') return "🕓 نشطة";
-                        if (val === 'in_progress') return "⏳ قيد المعالجة";
-                        if (val === 'done') return "✅ مكتملة";
-                        return val;
-                    }
-                },
-                {
-                    title: "📅 اكتملت في", field: "completed_at", headerSort: false,
-                    formatter: cell => cell.getValue() ? new Date(cell.getValue()).toLocaleString() : "-"
-                },
-            ],
-        });
-
-        // تحميل المهام
         function refreshTaskList() {
             fetch('{{ route("tasks.index") }}', {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             }).then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    taskTable.setData(data.tasks);
+                    const uniqueStatuses = [...new Set(data.tasks.map(task => task.status))];
+
+                    const statusLabels = {
+                        pending: "🕓 جديدة",
+                        in_progress: "⏳ قيد المعالجة",
+                        done: "✅ مكتملة"
+                    };
+
+                    const statusFilterOptions = {
+                        "": "الكل",
+                    };
+
+                    uniqueStatuses.forEach(status => {
+                        statusFilterOptions[status] = statusLabels[status] || status;
+                    });
+
+                    if (window.taskTable) {
+                        window.taskTable.destroy();
+                    }
+
+                    window.taskTable = new Tabulator("#task-table", {
+                        layout: "fitColumns",
+                        selectable: true,
+                        placeholder: "لا توجد مهام حالياً",
+                        data: data.tasks,
+                        columns: [
+                            { title: "📌", formatter: "rowSelection", titleFormatter: "rowSelection", hozAlign: "center", headerSort: false, width: 50 },
+                            { title: "المهمة", field: "title", headerSort: true, headerFilter: "input" },
+                            { title: "🔖 المرجع", field: "reference", headerSort: false, headerFilter: "input" },
+                            {
+                                title: "الحالة", field: "status", hozAlign: "center", headerSort: true,
+                                headerFilter: "list",
+                                headerFilterParams: {
+                                    clearable: true,
+                                    values: statusFilterOptions
+                                },
+                                formatter: cell => {
+                                    const val = cell.getValue();
+                                    if (val === 'pending') return "🕓 جديدة";
+                                    if (val === 'in_progress') return "⏳ قيد المعالجة";
+                                    if (val === 'done') return "✅ مكتملة";
+                                    return val;
+                                }
+                            },
+                            {
+                                title: "📆 أنشئت في", field: "created_at", headerSort: true, headerFilter: "input",
+                                formatter: cell => new Date(cell.getValue()).toLocaleString()
+                            },
+                            {
+                                title: "📅 اكتملت في", field: "completed_at", headerSort: true, headerFilter: "input",
+                                formatter: cell => cell.getValue() ? new Date(cell.getValue()).toLocaleString() : "-"
+                            },
+                        ],
+                    });
                 }
             });
         }
