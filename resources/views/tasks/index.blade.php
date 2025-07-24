@@ -35,6 +35,53 @@
     {{-- جدول Tabulator --}}
     <div id="task-table" class="bg-white rounded-lg shadow overflow-x-auto"></div>
     
+    <!-- نافذة Modal للملفات -->
+    <!-- Modal لإرفاق ملفات -->
+    <div id="attachments-modal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 hidden">
+
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 relative">
+
+            <!-- زر إغلاق -->
+            <button onclick="closeAttachmentsModal()"
+                    class="absolute top-2 left-2 text-gray-500 hover:text-gray-800 text-xl">
+                ×
+            </button>
+
+            <h2 class="text-xl font-semibold mb-4 text-center">إدارة المرفقات</h2>
+
+            <!-- نموذج رفع الملفات -->
+            <form id="upload-form" enctype="multipart/form-data" class="mb-6">
+                @csrf
+                <input type="hidden" name="task_id" id="attachment_task_id">
+
+                <div class="flex items-center space-x-4">
+                    <input type="file" name="attachment" id="attachment-input" multiple
+                        class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0
+                                file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700
+                                hover:file:bg-blue-100 transition">
+                    <button type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded shadow">
+                        رفع
+                    </button>
+                </div>
+            </form>
+
+            <!-- قائمة الملفات المرفقة -->
+            <div class="mt-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">الملفات المرفقة:</h3>
+
+                <div id="attachmentList">
+                    <!-- يتم ملؤها بـ JS عند الفتح أو بعد الرفع -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+
+
     <style>
     /* تحسين شكل جدول Tabulator باستخدام Tailwind */
     #task-table .tabulator {
@@ -146,6 +193,16 @@
                                 title: "📅 اكتملت في", field: "completed_at", headerSort: true, headerFilter: "input",
                                 formatter: cell => cell.getValue() ? new Date(cell.getValue()).toLocaleString() : "-"
                             },
+                            {
+                                title: "📎 ملفات", hozAlign: "center", headerSort: false, formatter: () => {
+                                    return `<button class="open-attachments-modal bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded">📎</button>`;
+                                },
+                                cellClick: function (e, cell) {
+                                    const task = cell.getRow().getData();
+                                    openAttachmentsModal(task.id, task.title);
+                                }
+                            },
+
                         ],
                     });
                 }
@@ -230,6 +287,127 @@
 
         // تحميل أولي
         refreshTaskList();
+
+        // تحميل الملفات - فتح مودل
+        let currentTaskId = null;
+
+        function openAttachmentsModal(taskId) {
+            currentTaskId = taskId;
+            document.getElementById("attachments-modal").classList.remove("hidden");
+            loadAttachments(taskId);
+        }
+
+        function closeAttachmentsModal() {
+            document.getElementById("attachments-modal").classList.add("hidden");
+        }
+
+
+        function loadAttachments(taskId) {
+            fetch(`{{ url('/tasks') }}/${taskId}/attachments`)
+                .then(res => res.json())
+                .then(data => {
+                    const list = document.getElementById('attachmentList');
+                    list.innerHTML = '';
+
+                    if (data.length === 0) {
+                        list.innerHTML = `<p class="text-gray-500 text-sm">لا توجد ملفات مرفقة بعد.</p>`;
+                        return;
+                    }
+
+                    const ul = document.createElement('ul');
+                    ul.className = 'space-y-2';
+
+                    data.forEach(file => {
+                        const sizeKB = file.size / 1024;
+                        const sizeFormatted = sizeKB > 1024
+                            ? (sizeKB / 1024).toFixed(2) + ' MB'
+                            : sizeKB.toFixed(2) + ' KB';
+
+                        const ext = file.original_name.split('.').pop().toLowerCase();
+                        const createdAt = new Date(file.created_at).toLocaleString('ar-DZ');
+
+                        const li = document.createElement('li');
+                        li.className = 'flex items-center justify-between bg-gray-100 p-2 rounded shadow-sm';
+
+                        li.innerHTML = `
+                            <div>
+                                <p class="font-semibold text-gray-800">${file.original_name}</p>
+                                <p class="text-sm text-gray-600">
+                                    النوع: ${ext} |
+                                    الحجم: ${sizeFormatted} |
+                                    أضيف في: ${createdAt}
+                                </p>
+                            </div>
+
+                            <div class="flex items-center space-x-2">
+                                <a href="${file.url}" target="_blank" class="text-blue-600 hover:underline text-sm">
+                                    معاينة
+                                </a>
+                                <button onclick="deleteAttachment(${file.id})"
+                                        class="text-red-600 hover:text-red-800 text-sm">
+                                    🗑 حذف
+                                </button>
+                            </div>
+                        `;
+
+                        ul.appendChild(li);
+                    });
+
+                    list.appendChild(ul);
+                });
+        }
+
+        
+
+        document.getElementById('upload-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const input = document.getElementById('attachment-input');
+            if (!input.files.length || !currentTaskId) return;
+
+            const formData = new FormData();
+            formData.append('attachment', input.files[0]);
+
+            fetch(`{{ url('/tasks') }}/${currentTaskId}/attachments`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    input.value = '';
+                    loadAttachments(currentTaskId);
+                } else {
+                    alert(data.message || "فشل في رفع الملف");
+                }
+            });
+        });
+
+        function deleteAttachment(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا الملف؟')) return;
+
+            fetch(`{{ url('/attachments') }}/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    loadAttachments(currentTaskId);
+                }
+            });
+        }
+        // جعل الدوال متاحة عالمياً لأننا نستخدمها في onclick داخل HTML
+        window.openAttachmentsModal = openAttachmentsModal;
+        window.closeAttachmentsModal = closeAttachmentsModal;
+        window.deleteAttachment = deleteAttachment;
+
+
     });
     </script>
 @endpush

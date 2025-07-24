@@ -12,4 +12,9 @@ class Task extends Model
     protected $fillable = ['title', 'reference', 'status', 'started_at', 'completed_at'];
 
     protected $dates = ['started_at', 'completed_at'];
+
+    public function attachments()
+    {
+        return $this->hasMany(TaskAttachment::class);
+    }
 }
