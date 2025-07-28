@@ -194,24 +194,39 @@
                                 formatter: cell => cell.getValue() ? new Date(cell.getValue()).toLocaleString() : "-"
                             },
                             {
-                                title: "📎 ملفات", hozAlign: "center", headerSort: false, formatter: () => {
-                                    return `<button class="open-attachments-modal bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded">📎</button>`;
-                                },
-                                cellClick: function (e, cell) {
-                                    const task = cell.getRow().getData();
-                                    openAttachmentsModal(task.id, task.title);
+                                title: "مرفقات",
+                                field: "attachments_count",
+                                hozAlign: "center",
+                                headerSort: false,
+                                width: 150,
+                                formatter: function (cell) {
+                                    const taskId = cell.getRow().getData().id;
+                                    const count = cell.getValue();
+
+                                    const badge = count > 0
+                                        ? `<span class="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue bg-red-500 rounded-full">${count}</span>`
+                                        : '';
+
+                                    return `
+                                        <button onclick="openAttachmentsModal(${taskId})"
+                                            class="relative inline-flex items-center bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full hover:bg-blue-200 transition">
+                                            <span class="mr-1">📎 مرفقات</span>
+                                            ${badge}
+                                        </button>
+                                    `;
                                 }
                             },
-
                         ],
                     });
                 }
             });
         }
 
+
         // إضافة مهمة
         document.getElementById('task-form').addEventListener('submit', function(e) {
             e.preventDefault();
+
             const title = document.getElementById('title').value;
             const reference = document.getElementById('reference').value;
 
@@ -219,19 +234,24 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                     'X-Requested-With': 'XMLHttpRequest'
                 },
+                credentials: 'same-origin', // ✅ مهم جدًا لتمرير الجلسة
                 body: JSON.stringify({ title, reference })
-            }).then(res => res.json())
+            })
+            .then(res => res.json())
             .then(data => {
                 if (data.success) {
                     showNotification("تمت إضافة المهمة بنجاح ✅");
                     this.reset();
                     refreshTaskList();
+                } else {
+                    showNotification("فشل في الإضافة ❌: " + (data.message || ''));
                 }
             });
         });
+
 
         // إرجاع الـ IDs المحددة
         function getSelectedTaskIds() {

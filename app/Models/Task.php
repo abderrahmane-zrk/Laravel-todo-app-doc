@@ -9,7 +9,8 @@ class Task extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['title', 'reference', 'status', 'started_at', 'completed_at'];
+    protected $fillable = ['title', 'reference', 'status', 'started_at', 'completed_at', 'user_id'];
+
 
     protected $dates = ['started_at', 'completed_at'];
 
@@ -17,4 +18,10 @@ class Task extends Model
     {
         return $this->hasMany(TaskAttachment::class);
     }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
 }

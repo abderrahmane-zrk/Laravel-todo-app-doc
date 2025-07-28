@@ -14,27 +14,41 @@ class TaskController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'reference' => 'nullable|string|max:100'
+            'reference' => 'nullable|string|max:100',
         ]);
 
+        $userId = auth()->id();
+        if (!$userId) {
+            return response()->json(['success' => false, 'message' => 'لم يتم التعرف على المستخدم']);
+        }
+        
         $task = Task::create([
             'title' => $request->title,
             'reference' => $request->reference,
+            'status' => 'pending',
+            'user_id' => auth()->id(), // ✅ نربط المستخدم الحالي
         ]);
 
         return response()->json(['success' => true, 'task' => $task]);
     }
 
+
+
     public function index(Request $request)
     {
+        $tasks = Task::withCount('attachments')
+            ->where('user_id', auth()->id()) // ✅ فقط مهام المستخدم الحالي
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         if ($request->ajax()) {
-            $tasks = Task::orderByDesc('id')->get();
             return response()->json(['success' => true, 'tasks' => $tasks]);
         }
 
-        $tasks = Task::orderByDesc('id')->get();
         return view('tasks.index', compact('tasks'));
     }
+
+
 
     public function deleteMultiple(Request $request)
     {
@@ -86,6 +100,7 @@ class TaskController extends Controller
         ]);
 
         if ($request->hasFile('attachment')) {
+            
             $file = $request->file('attachment');
             $path = $file->store('attachments', 'public');
 
@@ -94,6 +109,7 @@ class TaskController extends Controller
                 'original_name' => $file->getClientOriginalName(),
                 'mime_type' => $file->getMimeType(),
                 'size' => $file->getSize(),
+                'user_id' => auth()->id(), // ✅ ربط المرفق بالمستخدم
             ]);
 
             return response()->json([
@@ -124,4 +140,6 @@ class TaskController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    
 }

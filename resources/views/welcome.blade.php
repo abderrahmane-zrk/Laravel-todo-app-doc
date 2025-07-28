@@ -10,7 +10,7 @@
 
     <div class="text-center">
         <h1 class="text-5xl font-bold text-blue-600 mb-4">?? Laravel + Tailwind</h1>
-        <p class="text-lg">ÇáÂä Tailwind íÚãá ÈÔßá ããÊÇÒ!</p>
+        <p class="text-lg"> Tailwind </p>
     </div>
 
 </body>
