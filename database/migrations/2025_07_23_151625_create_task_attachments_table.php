@@ -13,13 +13,20 @@ return new class extends Migration
     {
         Schema::create('task_attachments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('task_id')->constrained()->onDelete('cascade'); // العلاقة مع المهام
+            
+            // ✅ اجعل العلاقة مع المهام اختيارية
+            $table->foreignId('task_id')->nullable()->constrained()->onDelete('set null');
+
             $table->string('filename');   // اسم الملف على السيرفر
             $table->string('original_name'); // الاسم الأصلي للملف وقت الرفع
             $table->string('mime_type')->nullable(); // نوع الملف
             $table->unsignedBigInteger('size')->nullable(); // حجم الملف بالبايت
+
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+
             $table->timestamps();
         });
+
     }
 
     /**

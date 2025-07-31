@@ -14,8 +14,10 @@ class TaskController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'reference' => 'nullable|string|max:100',
+            'reference' => 'nullable|string|max:255',
+            'comment' => 'nullable|string',
         ]);
+
 
         $userId = auth()->id();
         if (!$userId) {
@@ -26,6 +28,7 @@ class TaskController extends Controller
             'title' => $request->title,
             'reference' => $request->reference,
             'status' => 'pending',
+            'comment' => $request->comment,
             'user_id' => auth()->id(), // ✅ نربط المستخدم الحالي
         ]);
 

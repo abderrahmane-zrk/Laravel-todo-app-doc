@@ -3,6 +3,8 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\TaskAttachmentController;
+
 
 Route::get('/', function () {
     return redirect('/tasks');
@@ -34,6 +36,19 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+      // عرض صفحة الوثائق (واجهة Tabulator)
+    Route::get('/attachments', [TaskAttachmentController::class, 'index'])->name('attachments.index');
+
+    // جلب المرفقات كـ JSON لـ Tabulator
+    Route::get('/attachments/fetch', [TaskAttachmentController::class, 'fetch'])->name('attachments.fetch');
+
+    // تحميل المرفق مباشرة إن أردت استخدامه
+    Route::get('/attachments/download/{id}', [TaskAttachmentController::class, 'download'])->name('attachments.download');
+
+
+    Route::post('/attachments/upload-general', [TaskAttachmentController::class, 'uploadGeneral'])->name('attachments.uploadGeneral');
+
 
     // ✅ Route تسجيل الخروج (ضروري للهيدر)
     Route::post('/logout', function (\Illuminate\Http\Request $request) {

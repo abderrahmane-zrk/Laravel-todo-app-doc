@@ -15,6 +15,7 @@ return new class extends Migration
             $table->enum('status', ['pending', 'in_progress', 'done'])->default('pending');
             $table->timestamp('started_at')->nullable();
             $table->timestamp('completed_at')->nullable();
+            $table->text('comment')->nullable();
             $table->timestamps();
         });
     }

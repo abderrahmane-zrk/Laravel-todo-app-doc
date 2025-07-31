@@ -32,7 +32,15 @@
             </div>
         @endauth
     </header>
-
+    <nav class="bg-gray-800 text-white p-4 flex justify-between items-center">
+            <div class="text-lg font-semibold">
+                ToDo App
+            </div>
+            <div class="space-x-4">
+                <a href="{{ route('tasks.index') }}" class="hover:underline">المهام</a>
+                <a href="{{ route('attachments.index') }}" class="hover:underline">الوثائق</a>
+            </div>
+    </nav>
 
 
     <!-- المحتوى الديناميكي -->

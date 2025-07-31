@@ -1,11 +1,32 @@
 @extends('layouts.app')
 
 @section('content')
+
+    <!-- Trix Editor -->
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/trix@2.0.8/dist/trix.css">
+    <script type="text/javascript" src="https://unpkg.com/trix@2.0.8/dist/trix.umd.min.js"></script>
+
+
+    
+
+
+
+
     <!-- إشعار -->
     <div id="notification" class="hidden fixed bottom-5 right-5 bg-white border border-gray-200 p-4 rounded shadow-lg max-w-xs">
         
         <span id="closeBtn" class="absolute top-2 left-2 cursor-pointer text-gray-500 hover:text-black">×</span>
     </div>
+
+    <!-- Modal التعليق -->
+    <div id="comment-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-xl p-6 max-w-xl w-full relative">
+            <button onclick="document.getElementById('comment-modal').classList.add('hidden')" class="absolute top-2 left-2 text-gray-600 text-xl">&times;</button>
+            <h2 class="text-lg font-bold mb-4"> ملاحظات او تعليقات </h2>
+            <div id="comment-modal-content" class="prose max-h-96 overflow-y-auto"></div>
+        </div>
+    </div>
+
 
     {{-- إضافة مهمة --}}
     <form id="task-form" class="flex flex-col md:flex-row items-center gap-2 mb-6">
@@ -13,8 +34,15 @@
             class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring focus:border-blue-300" required>
         <input type="text" name="reference" id="reference" placeholder="المرجع"
             class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring focus:border-blue-300" required>
-        <button type="submit"
+      <div class="mt-2">
+            <label for="comment" class="block text-sm font-medium text-gray-700">   ملاحظات او تعليقات </label>
+            <input id="comment" type="hidden" name="comment">
+            <trix-editor input="comment" class="trix-content bg-white border rounded-md mt-1"></trix-editor>
+      </div>
+
+            <button type="submit"
             class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow transition">➕ إضافة</button>
+    
     </form>
 
     {{-- أزرار العمليات --}}
@@ -122,6 +150,38 @@
     <script>
     document.addEventListener('DOMContentLoaded', function () {
 
+        
+        // إضافة مهمة
+        document.getElementById('task-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const title = document.getElementById('title').value;
+            const reference = document.getElementById('reference').value;
+            const comment = document.getElementById('comment').value; // ✅ قراءة محتوى Trix
+
+            fetch('{{ route("tasks.store") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ title, reference, comment }) // ✅ إرسال أيضًا
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification("تمت إضافة المهمة بنجاح ✅");
+                    this.reset();
+                    refreshTaskList();
+                } else {
+                    showNotification("فشل في الإضافة ❌: " + (data.message || ''));
+                }
+            });
+        });
+
+
         const notification = document.getElementById('notification');
 
         // إشعار Tailwind
@@ -194,6 +254,18 @@
                                 formatter: cell => cell.getValue() ? new Date(cell.getValue()).toLocaleString() : "-"
                             },
                             {
+                                title: "ملاحظات او تعليقات", 
+                                formatter: function(cell, formatterParams) {
+                                    return "<button class='view-comment-btn relative inline-flex items-center bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full hover:bg-blue-200 transition'>عرض</button>";
+                                },
+                                cellClick: function(e, cell) {
+                                    const commentHtml = cell.getRow().getData().comment || "لا يوجد تعليق";
+                                    document.getElementById('comment-modal-content').innerHTML = commentHtml;
+                                    document.getElementById('comment-modal').classList.remove('hidden');
+                                }
+                            },
+
+                            {
                                 title: "مرفقات",
                                 field: "attachments_count",
                                 hozAlign: "center",
@@ -221,36 +293,6 @@
                 }
             });
         }
-
-
-        // إضافة مهمة
-        document.getElementById('task-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            const title = document.getElementById('title').value;
-            const reference = document.getElementById('reference').value;
-
-            fetch('{{ route("tasks.store") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                credentials: 'same-origin', // ✅ مهم جدًا لتمرير الجلسة
-                body: JSON.stringify({ title, reference })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification("تمت إضافة المهمة بنجاح ✅");
-                    this.reset();
-                    refreshTaskList();
-                } else {
-                    showNotification("فشل في الإضافة ❌: " + (data.message || ''));
-                }
-            });
-        });
 
 
         // إرجاع الـ IDs المحددة
