@@ -1,8 +1,9 @@
 <?php
 
 namespace App\Providers;
-
+use Spatie\Permission\Middlewares\RoleMiddleware;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Blade;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,5 +21,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         //
+         Blade::if('role', function ($role) {
+            return auth()->check() && auth()->user()->hasRole($role);
+        });
     }
 }

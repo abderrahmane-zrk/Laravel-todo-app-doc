@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 
+use App\Models\User;
+
 class UsersTableSeeder extends Seeder
 {
 
@@ -42,6 +44,17 @@ class UsersTableSeeder extends Seeder
                 'updated_at' => '2025-07-28 14:28:51',
             ),
         ));
+        // ✅ ربط المستخدمين بالأدوار
+        $user1 = User::where('email', 'user2@test.test')->first();
+        $user2 = User::where('email', 'user3@test.test')->first();
+
+        if ($user1) {
+            $user1->assignRole('admin'); // 👈 هذا admin
+        }
+
+        if ($user2) {
+            $user2->assignRole('user'); // 👈 هذا user عادي
+        }
         
         
     }

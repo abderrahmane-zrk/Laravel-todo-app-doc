@@ -1,4 +1,11 @@
 @extends('layouts.app')
+@php
+    $isAdmin = auth()->check() && auth()->user()->hasRole('admin');
+@endphp
+
+<p class="text-sm text-red-600 px-4 py-2 bg-red-100 rounded">
+    isAdmin = {{ $isAdmin ? 'true' : 'false' }}
+</p>
 
 @section('content')
 
@@ -56,9 +63,22 @@
         <button type="button" data-status="done"
             class="status-btn bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow transition">✅ تم
             الإنجاز</button>
-        <button id="delete-btn"
-            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow transition">🗑️ حذف المحدد</button>
+           
+
+            @php
+  $isAdmin = auth()->check() && auth()->user()->hasRole('admin');
+
+  $isuser = auth()->check() && auth()->user()->hasRole('user');
+@endphp
+
+@hasrole('admin')
+<button id="delete-btn"
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow transition">🗑️ حذف المحدد</button>
+@endhasrole
+
+
     </div>
+
 
     {{-- جدول Tabulator --}}
     <div id="task-table" class="bg-white rounded-lg shadow overflow-x-auto"></div>
@@ -106,8 +126,6 @@
 
         </div>
     </div>
-
-
 
 
     <style>
@@ -325,27 +343,7 @@
             });
         });
 
-        // حذف المهام المحددة
-        document.getElementById('delete-btn').addEventListener('click', function () {
-            const ids = getSelectedTaskIds();
-            if (ids.length === 0) return showNotification('حدد المهام التي تريد حذفها', 'error');
-
-            fetch('{{ route("tasks.deleteMultiple") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ ids })
-            }).then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification("تم حذف المهام المحددة 🗑️");
-                    refreshTaskList();
-                }
-            });
-        });
+        
 
         // تحميل أولي
         refreshTaskList();
@@ -421,32 +419,36 @@
 
         
 
-        document.getElementById('upload-form').addEventListener('submit', function (e) {
-            e.preventDefault();
+        const uploadForm = document.getElementById('upload-form');
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', function (e) {
+                e.preventDefault();
 
-            const input = document.getElementById('attachment-input');
-            if (!input.files.length || !currentTaskId) return;
+                const input = document.getElementById('attachment-input');
+                if (!input.files.length || !currentTaskId) return;
 
-            const formData = new FormData();
-            formData.append('attachment', input.files[0]);
+                const formData = new FormData();
+                formData.append('attachment', input.files[0]);
 
-            fetch(`{{ url('/tasks') }}/${currentTaskId}/attachments`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    input.value = '';
-                    loadAttachments(currentTaskId);
-                } else {
-                    alert(data.message || "فشل في رفع الملف");
-                }
+                fetch(`{{ url('/tasks') }}/${currentTaskId}/attachments`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        input.value = '';
+                        loadAttachments(currentTaskId);
+                    } else {
+                        alert(data.message || "فشل في رفع الملف");
+                    }
+                });
             });
-        });
+        }
+
 
         function deleteAttachment(id) {
             if (!confirm('هل أنت متأكد من حذف هذا الملف؟')) return;
@@ -464,6 +466,34 @@
                 }
             });
         }
+        // حذف المهام المحددة
+
+        const deleteBtn = document.getElementById('delete-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', function () {
+                const ids = getSelectedTaskIds();
+                if (ids.length === 0) return showNotification('حدد المهام التي تريد حذفها', 'error');
+
+                fetch('{{ route("tasks.deleteMultiple") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ ids })
+                }).then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification("تم حذف المهام المحددة 🗑️");
+                        refreshTaskList();
+                    }
+                });
+            });
+        }
+
+
+
         // جعل الدوال متاحة عالمياً لأننا نستخدمها في onclick داخل HTML
         window.openAttachmentsModal = openAttachmentsModal;
         window.closeAttachmentsModal = closeAttachmentsModal;
@@ -471,5 +501,10 @@
 
 
     });
+
+
+
+
+
     </script>
 @endpush
