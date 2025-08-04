@@ -40,6 +40,8 @@ class RegisteredUserController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
         ]);
+        // ✅ تعيين الدور الافتراضي
+        $user->assignRole('user');
 
         event(new Registered($user));
 

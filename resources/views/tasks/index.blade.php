@@ -1,22 +1,11 @@
 @extends('layouts.app')
-@php
-    $isAdmin = auth()->check() && auth()->user()->hasRole('admin');
-@endphp
 
-<p class="text-sm text-red-600 px-4 py-2 bg-red-100 rounded">
-    isAdmin = {{ $isAdmin ? 'true' : 'false' }}
-</p>
 
 @section('content')
 
     <!-- Trix Editor -->
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/trix@2.0.8/dist/trix.css">
     <script type="text/javascript" src="https://unpkg.com/trix@2.0.8/dist/trix.umd.min.js"></script>
-
-
-    
-
-
 
 
     <!-- إشعار -->
@@ -65,16 +54,17 @@
             الإنجاز</button>
            
 
-            @php
-  $isAdmin = auth()->check() && auth()->user()->hasRole('admin');
+        @php
+            $isAdmin = auth()->check() && auth()->user()->hasRole('admin');
 
-  $isuser = auth()->check() && auth()->user()->hasRole('user');
-@endphp
-
-@hasrole('admin')
-<button id="delete-btn"
-                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow transition">🗑️ حذف المحدد</button>
-@endhasrole
+            $isuser = auth()->check() && auth()->user()->hasRole('user');
+        @endphp
+        
+        @can('delete tasks')
+       
+            <button id="delete-btn"
+                            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow transition">🗑️ حذف المحدد</button>
+        @endcan
 
 
     </div>
