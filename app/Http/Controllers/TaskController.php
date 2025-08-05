@@ -144,5 +144,37 @@ class TaskController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function assigned()
+    {
+        return view('tasks.assigned');
+    }
+
+
+    public function fetchAssigned()
+    {
+        $tasks = auth()->user()->assignedTasks()
+            ->withCount('attachments')
+            ->latest()
+            ->get()
+            ->map(function ($task) {
+                return [
+                    'id' => $task->id,
+                    'title' => $task->title,
+                    'reference' => $task->reference,
+                    'status' => $task->status,
+                    'started_at' => optional($task->started_at)->format('Y-m-d'),
+                    'completed_at' => optional($task->completed_at)->format('Y-m-d'),
+                    'comment' => strip_tags($task->comment),
+                    'attachments_count' => $task->attachments_count,
+                    'created_at' => $task->created_at->format('Y-m-d'),
+                ];
+            });
+
+        return response()->json($tasks);
+    }
+
+    
+
+
     
 }

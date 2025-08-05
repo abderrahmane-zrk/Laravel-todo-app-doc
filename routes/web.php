@@ -1,13 +1,18 @@
 <?php
 
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskAttachmentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\UserManagementController;
+use App\Http\Controllers\Admin\PermissionManagementController;
+
+
 
 // ✅ إعادة توجيه أي زيارة للجذر إلى /tasks
 Route::get('/', fn () => redirect('/tasks'));
+
 
 // ✅ راوتات المشرفين فقط – لوحة التحكم
 Route::middleware(['auth', 'role:admin'])
@@ -15,6 +20,7 @@ Route::middleware(['auth', 'role:admin'])
     ->name('admin.')
     ->group(function () {
     Route::get('/', fn () => view('admin.dashboard'))->name('dashboard');
+
 
     // إدارة المستخدمين
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
@@ -27,16 +33,21 @@ Route::middleware(['auth', 'role:admin'])
     Route::post('/users/{user}/update', [UserManagementController::class, 'update'])->name('users.update');
 
 
-    // عرض الصلاحيات
-    Route::get('/permissions', function () {
-        $users = \App\Models\User::with('roles', 'permissions')->get();
-        $allPermissions = \Spatie\Permission\Models\Permission::pluck('name');
-        return view('admin.permissions', compact('users', 'allPermissions'));
-    })->name('permissions');
-
     Route::get('/permissions-data/{user}', [UserManagementController::class, 'getPermissions'])->name('permissions.data');
     Route::post('/permissions-update/{user}', [UserManagementController::class, 'updatePermissions'])->name('permissions.update');
 
+    Route::get('/permissions', [PermissionManagementController::class, 'index'])->name('permissions');
+    Route::get('/permissions-fetch', [PermissionManagementController::class, 'fetch'])->name('permissions.fetch');
+    Route::post('/permissions-create', [PermissionManagementController::class, 'create'])->name('permissions.create');
+
+
+    // ✅ إحضار المستخدمين المرتبطين بصلاحية معينة
+    Route::get('/permissions-users/{permission}', [PermissionManagementController::class, 'getUsersWithPermission'])
+        ->name('permissions.users');
+
+    // ✅ حذف صلاحيات متعددة
+    Route::post('/permissions/delete-multiple', [PermissionManagementController::class, 'deleteMultiplePermissions'])
+        ->name('permissions.deleteMultiple');
 
 });
 
@@ -62,7 +73,6 @@ Route::middleware(['auth'])->group(function () {
 
     // ✅ حذف مرفق – فقط للمشرف
     Route::delete('/attachments/{id}', [TaskController::class, 'deleteAttachment'])
-        ->middleware('role:admin')
         ->name('tasks.attachments.delete');
 
     // ✅ عرض مرفقات مهمة – للجميع
@@ -73,6 +83,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/attachments/fetch', [TaskAttachmentController::class, 'fetch'])->name('attachments.fetch');
     Route::get('/attachments/download/{id}', [TaskAttachmentController::class, 'download'])->name('attachments.download');
 
+    Route::post('/attachments/delete-multiple', [TaskAttachmentController::class, 'deleteMultiple'])
+    ->name('attachments.deleteMultiple');
+
+
     // ✅ رفع وثيقة عامة – فقط للمشرف
     Route::post('/attachments/upload-general', [TaskAttachmentController::class, 'uploadGeneral'])
         ->name('attachments.uploadGeneral');
@@ -81,6 +95,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('/assigned-tasks', [TaskController::class, 'assigned'])->name('tasks.assigned');
+    Route::get('/assigned-tasks/fetch', [TaskController::class, 'fetchAssigned'])->name('tasks.assigned.fetch');
+
 
     // ✅ تسجيل الخروج
     Route::post('/logout', function (\Illuminate\Http\Request $request) {

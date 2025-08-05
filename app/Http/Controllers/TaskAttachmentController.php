@@ -84,5 +84,14 @@ class TaskAttachmentController extends Controller
 
         return response()->json(['success' => true]);
     }
+    
+    //
+    public function deleteMultiple(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        TaskAttachment::whereIn('id', $ids)->delete();
+        return response()->json(['success' => true]);
+    }
+
 
 }

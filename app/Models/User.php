@@ -51,4 +51,21 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    protected static function booted()
+    {
+        static::deleting(function ($user) {
+            $user->roles()->detach();
+            $user->permissions()->detach();
+        });
+    }
+
+    public function assignedTasks()
+    {
+        return $this->belongsToMany(Task::class, 'assigned_task_user')->withTimestamps();
+    }
+
+
+
+
 }
