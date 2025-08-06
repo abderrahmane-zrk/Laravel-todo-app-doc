@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: "📝 الملاحظات",
                 field: "comment",
                 formatter: cell => {
-                    let text = cell.getValue();
+                    let text = cell.getValue() || ''; // إذا كانت null، عيّن ''
                     return text.length > 100 ? text.substring(0, 100) + '...' : text;
                 }
             },

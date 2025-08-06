@@ -1,5 +1,7 @@
 <?php
 
+namespace App\Http\Controllers;
+
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TaskController;
@@ -49,6 +51,8 @@ Route::middleware(['auth', 'role:admin'])
     Route::post('/permissions/delete-multiple', [PermissionManagementController::class, 'deleteMultiplePermissions'])
         ->name('permissions.deleteMultiple');
 
+   
+
 });
 
 
@@ -96,9 +100,10 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::get('/assigned-tasks', [TaskController::class, 'assigned'])->name('tasks.assigned');
-    Route::get('/assigned-tasks/fetch', [TaskController::class, 'fetchAssigned'])->name('tasks.assigned.fetch');
 
+    // المهام الموجهة (التي استُلمت من مشرف)
+    Route::get('/assigned-tasks', [AssignedTaskController::class, 'index'])->name('tasks.assigned');
+    Route::get('/assigned-tasks/fetch', [AssignedTaskController::class, 'fetch'])->name('tasks.assigned.fetch');
 
     // ✅ تسجيل الخروج
     Route::post('/logout', function (\Illuminate\Http\Request $request) {
@@ -107,6 +112,18 @@ Route::middleware(['auth'])->group(function () {
         $request->session()->regenerateToken();
         return redirect('/login');
     })->name('logout');
+
+    // ✅ صفحة "توجيه المهام"
+    Route::get('/tasks/assign', [TaskController::class, 'assignIndex'])->name('tasks.assign.index');
+
+    // ✅ API: جلب المهام الموجهة
+    Route::get('/tasks/assign/fetch', [TaskController::class, 'fetchAssignedTasks'])->name('tasks.assignedbypermitted.fetch');
+
+    // ✅ API: توجيه مهمة موجودة إلى مستخدمين آخرين
+    Route::post('/tasks/assign', [TaskController::class, 'assign'])->name('tasks.assign');
+
+
+    
 });
 
 // ✅ تضمين الراوتات الخاصة بالمصادقة (login/register/etc)

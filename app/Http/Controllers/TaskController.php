@@ -8,33 +8,42 @@ use App\Models\TaskAttachment;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
+
 class TaskController extends Controller
 {
+    use AuthorizesRequests;
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'title' => 'required|string|max:255',
             'reference' => 'nullable|string|max:255',
             'comment' => 'nullable|string',
+            'assigned_users' => 'nullable|array',
+            'assigned_users.*' => 'exists:users,id',
         ]);
 
-
-        $userId = auth()->id();
-        if (!$userId) {
-            return response()->json(['success' => false, 'message' => 'لم يتم التعرف على المستخدم']);
-        }
-        
         $task = Task::create([
-            'title' => $request->title,
-            'reference' => $request->reference,
+            'title' => $validated['title'],
+            'reference' => $validated['reference'] ?? null,
+            'comment' => $validated['comment'] ?? null,
             'status' => 'pending',
-            'comment' => $request->comment,
-            'user_id' => auth()->id(), // ✅ نربط المستخدم الحالي
+            'user_id' => Auth::id(),
+            'started_at' => now(),
         ]);
+
+        // إسناد المستخدمين إن وُجدوا
+        if (isset($validated['assigned_users'])) {
+            $task->assignedUsers()->sync($validated['assigned_users']);
+        }
 
         return response()->json(['success' => true, 'task' => $task]);
     }
-
 
 
     public function index(Request $request)
@@ -49,8 +58,7 @@ class TaskController extends Controller
         }
 
         return view('tasks.index', compact('tasks'));
-    }
-
+    }   
 
 
     public function deleteMultiple(Request $request)
@@ -144,36 +152,65 @@ class TaskController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function assigned()
+
+
+    public function update(Request $request, Task $task)
     {
-        return view('tasks.assigned');
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'reference' => 'nullable|string|max:255',
+            'comment' => 'nullable|string',
+            'status' => 'nullable|in:pending,in_progress,done',
+            'assigned_users' => 'nullable|array',
+            'assigned_users.*' => 'exists:users,id',
+        ]);
+
+        $task->update([
+            'title' => $validated['title'],
+            'reference' => $validated['reference'] ?? null,
+            'comment' => $validated['comment'] ?? null,
+            'status' => $validated['status'] ?? $task->status,
+        ]);
+
+        // تحديث المستخدمين الموجهة لهم المهمة
+        if (isset($validated['assigned_users'])) {
+            $task->assignedUsers()->sync($validated['assigned_users']);
+        }
+
+        return response()->json(['message' => 'تم تحديث المهمة بنجاح']);
     }
 
-
-    public function fetchAssigned()
+    public function assign(Request $request)
     {
-        $tasks = auth()->user()->assignedTasks()
-            ->withCount('attachments')
-            ->latest()
-            ->get()
-            ->map(function ($task) {
-                return [
-                    'id' => $task->id,
-                    'title' => $task->title,
-                    'reference' => $task->reference,
-                    'status' => $task->status,
-                    'started_at' => optional($task->started_at)->format('Y-m-d'),
-                    'completed_at' => optional($task->completed_at)->format('Y-m-d'),
-                    'comment' => strip_tags($task->comment),
-                    'attachments_count' => $task->attachments_count,
-                    'created_at' => $task->created_at->format('Y-m-d'),
-                ];
-            });
+        $request->validate([
+            'task_id' => 'required|exists:tasks,id',
+            'assigned_users' => 'required|array',
+            'assigned_users.*' => 'exists:users,id',
+        ]);
+
+        $task = Task::findOrFail($request->task_id);
+        $task->assignedUsers()->syncWithoutDetaching($request->assigned_users); // توجيه دون حذف السابق
+
+        return response()->json(['message' => 'تم توجيه المهمة بنجاح']);
+    }
+    
+
+    public function fetchAssignedTasks()
+    {
+
+        // في حالة المشرف، نريد جلب جميع المهام (ليس فقط الموجهة إليه)
+        
+            $tasks = Task::withCount('attachments')->get();
+        
 
         return response()->json($tasks);
     }
 
-    
+    public function assignIndex()
+    {
+        $users = User::all();
+        return view('tasks.assign_task_to', compact('users'));
+    }
 
 
     

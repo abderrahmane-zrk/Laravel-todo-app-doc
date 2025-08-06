@@ -43,6 +43,14 @@
             <a href="{{ route('tasks.index') }}" class="hover:text-yellow-300 transition">📝 مهامي</a>
             <a href="{{ route('tasks.assigned') }}" class="hover:text-yellow-300 transition">📥 المهام الموجهة إليّ</a>
             <a href="{{ route('attachments.index') }}" class="hover:text-yellow-300 transition">📎 الوثائق</a>
+            @can('assign_task')
+                
+                    <a href="{{ route('tasks.assign') }}" class="block px-4 py-2 hover:bg-gray-200">
+                        🧭 توجيه مهمة
+                    </a>
+                
+            @endcan
+
 
             @role('admin')
                 <a href="{{ route('admin.users.index') }}" class="hover:text-yellow-300 transition">👥 إدارة المستخدمين</a>
